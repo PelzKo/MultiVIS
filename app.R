@@ -12,8 +12,9 @@ library(plotly)
 library(data.table)
 library(shinyFiles)
 library(shinyalert)
+library(stringr)
 
-options(shiny.maxRequestSize=200*1024^2, scipen=999)
+options(shiny.maxRequestSize=200*1024^2, scipen=1)
 
 
 # Define UI for application that draws a histogram
@@ -36,7 +37,7 @@ ui <- fluidPage(
                selectInput(inputId = "nodes", label = "Closest nodes", choices = c(200, 300, 400), selected = 300),
                selectInput(inputId = "samples", label = "Negative samples", choices = c(5, 10, 20), selected = 10),
                selectInput(inputId = "learning", label = "Learning rate", choices = c(0.001, 0.01, 0.1), selected = 0.01),
-               selectInput(inputId = "steps", label = "Steps", choices = c(100000, 100000000), selected = 100000000)
+               selectInput(inputId = "steps", label = "Steps", choices = c("100000", "100000000"), selected = 100000000)
              ),
              mainPanel(plotlyOutput("plot")))
   )
@@ -57,12 +58,12 @@ server <- function(input, output) {
     
     load_data <- reactive({
       path <- paste0(wd(), "/defcut_anno_", input$dataset, "_", input$dims, "_", input$nodes, "_",
-                     input$samples, "_", input$learning, "_", prettyNum(input$steps, scientific=FALSE),
+                     input$samples, "_", input$learning, "_", input$steps,
                      "_clust_proj.tsv")
       if (!file.exists(path)){
         # If steps are 200,000,000 or 400,000,000 it is expected that they just have a
         # specific combination of parameters
-        if (input$steps==200000000 | input$steps==400000000){
+        if (input$steps=="200000000" | input$steps=="400000000"){
           shinyalert("File not found", paste0(path, " was not found on your system. ",
                                               "This might be because steps 200,000,000 ",
                                               "and 400,000,000 can only be used with ",
@@ -184,6 +185,9 @@ server <- function(input, output) {
       color_by <- input$enrichment
       if(input$enrichment == "biodomain"){
         color_by <- input$biodom
+      }
+      if(input$enrichment == "score"){
+        color_by <- input$scores
       }
       if (nrow(unique(data[,..color_by]))>350){
         shinyalert("Too many groups", paste0("You are trying to color ", nrow(unique(data[,..color_by])),
